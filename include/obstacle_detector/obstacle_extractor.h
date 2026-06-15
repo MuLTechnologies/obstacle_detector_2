@@ -74,7 +74,7 @@ public:
 
 private:
   void updateParamsUtil();
-  void setEnabledCallback(const std::shared_ptr<std_srvs::srv::SetBool::Request> &req,
+  void setActiveCallback(const std::shared_ptr<std_srvs::srv::SetBool::Request> &req,
                           const std::shared_ptr<std_srvs::srv::SetBool::Response> &res);
   void scanCallback(const sensor_msgs::msg::LaserScan& scan_msg);
   void pclCallback(const sensor_msgs::msg::PointCloud& pcl_msg);
@@ -106,7 +106,7 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pcl2_sub_;
   rclcpp::Publisher<obstacle_detector::msg::Obstacles>::SharedPtr obstacles_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr obstacles_vis_pub_;
-  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_enabled_srv_;
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_active_srv_;
 
   rclcpp::Time stamp_;
   rclcpp::Time time_last_marker_published_;

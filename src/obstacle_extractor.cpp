@@ -79,8 +79,8 @@ ObstacleExtractor::ObstacleExtractor(std::shared_ptr<rclcpp::Node> nh, std::shar
   nh_->declare_parameter("max_y_limit", rclcpp::PARAMETER_DOUBLE);
   nh_->declare_parameter("frame_id", rclcpp::PARAMETER_STRING);
 
-  set_enabled_srv_ = nh_->create_service<std_srvs::srv::SetBool>("~/set_enabled",
-      std::bind(&ObstacleExtractor::setEnabledCallback, this,
+  set_active_srv_ = nh_->create_service<std_srvs::srv::SetBool>("~/set_active",
+      std::bind(&ObstacleExtractor::setActiveCallback, this,
                 std::placeholders::_1, std::placeholders::_2));
 
   initialize();
@@ -145,7 +145,7 @@ void ObstacleExtractor::updateParamsUtil(){
   }
 }
 
-void ObstacleExtractor::setEnabledCallback(const std::shared_ptr<std_srvs::srv::SetBool::Request> &req,
+void ObstacleExtractor::setActiveCallback(const std::shared_ptr<std_srvs::srv::SetBool::Request> &req,
                                            const std::shared_ptr<std_srvs::srv::SetBool::Response> &res) {
   bool prev_active = p_active_;
   p_active_ = req->data;
