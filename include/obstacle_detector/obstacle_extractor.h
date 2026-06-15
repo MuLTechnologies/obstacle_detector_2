@@ -56,6 +56,7 @@
 #include "visualization_msgs/msg/marker.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include "std_srvs/srv/empty.hpp"
+#include "std_srvs/srv/set_bool.hpp"
 
 #include "obstacle_detector/msg/obstacles.hpp"
 #include "obstacle_detector/msg/circle_obstacle.hpp"
@@ -73,9 +74,8 @@ public:
 
 private:
   void updateParamsUtil();
-  void updateParams(const std::shared_ptr<rmw_request_id_t> request_header, 
-                    const std::shared_ptr<std_srvs::srv::Empty::Request> &req, 
-                    const std::shared_ptr<std_srvs::srv::Empty::Response> &res);
+  void setEnabledCallback(const std::shared_ptr<std_srvs::srv::SetBool::Request> &req,
+                          const std::shared_ptr<std_srvs::srv::SetBool::Response> &res);
   void scanCallback(const sensor_msgs::msg::LaserScan& scan_msg);
   void pclCallback(const sensor_msgs::msg::PointCloud& pcl_msg);
   void pcl2Callback(sensor_msgs::msg::PointCloud2::SharedPtr pcl_msg);
@@ -106,7 +106,7 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pcl2_sub_;
   rclcpp::Publisher<obstacle_detector::msg::Obstacles>::SharedPtr obstacles_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr obstacles_vis_pub_;
-  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr params_srv_;
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_enabled_srv_;
 
   rclcpp::Time stamp_;
   rclcpp::Time time_last_marker_published_;
