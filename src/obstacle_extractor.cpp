@@ -56,15 +56,7 @@ ObstacleExtractor::ObstacleExtractor(std::shared_ptr<rclcpp::Node> nh, std::shar
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(nh_->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
   time_last_marker_published_ = nh_->get_clock()->now() - rclcpp::Duration(10, 0);
-  initialize();
-}
 
-ObstacleExtractor::~ObstacleExtractor() {
-
-}
-
-void ObstacleExtractor::updateParamsUtil(){
-  bool prev_active = p_active_;
   nh_->declare_parameter("active", rclcpp::PARAMETER_BOOL);
   nh_->declare_parameter("use_scan", rclcpp::PARAMETER_BOOL);
   nh_->declare_parameter("use_pcl", rclcpp::PARAMETER_BOOL);
@@ -73,9 +65,7 @@ void ObstacleExtractor::updateParamsUtil(){
   nh_->declare_parameter("circles_from_visibles", rclcpp::PARAMETER_BOOL);
   nh_->declare_parameter("discard_converted_segments", rclcpp::PARAMETER_BOOL);
   nh_->declare_parameter("transform_coordinates", rclcpp::PARAMETER_BOOL);
-
   nh_->declare_parameter("min_group_points", rclcpp::PARAMETER_INTEGER);
-
   nh_->declare_parameter("max_group_distance", rclcpp::PARAMETER_DOUBLE);
   nh_->declare_parameter("distance_proportion", rclcpp::PARAMETER_DOUBLE);
   nh_->declare_parameter("max_split_distance", rclcpp::PARAMETER_DOUBLE);
@@ -88,6 +78,20 @@ void ObstacleExtractor::updateParamsUtil(){
   nh_->declare_parameter("min_y_limit", rclcpp::PARAMETER_DOUBLE);
   nh_->declare_parameter("max_y_limit", rclcpp::PARAMETER_DOUBLE);
   nh_->declare_parameter("frame_id", rclcpp::PARAMETER_STRING);
+
+  set_active_srv_ = nh_->create_service<std_srvs::srv::SetBool>("~/set_active",
+      std::bind(&ObstacleExtractor::setActiveCallback, this,
+                std::placeholders::_1, std::placeholders::_2));
+
+  initialize();
+}
+
+ObstacleExtractor::~ObstacleExtractor() {
+
+}
+
+void ObstacleExtractor::updateParamsUtil(){
+  bool prev_active = p_active_;
 
   nh_->get_parameter_or("active", p_active_, true);
   nh_->get_parameter_or("use_scan", p_use_scan_, true);
@@ -141,10 +145,37 @@ void ObstacleExtractor::updateParamsUtil(){
   }
 }
 
-void ObstacleExtractor::updateParams(const std::shared_ptr<rmw_request_id_t> request_header,
-                                     const std::shared_ptr<std_srvs::srv::Empty::Request> &req, 
-                                     const std::shared_ptr<std_srvs::srv::Empty::Response> &res) {
-  updateParamsUtil();
+void ObstacleExtractor::setActiveCallback(const std::shared_ptr<std_srvs::srv::SetBool::Request> &req,
+                                           const std::shared_ptr<std_srvs::srv::SetBool::Response> &res) {
+  bool prev_active = p_active_;
+  p_active_ = req->data;
+
+  if (p_active_ != prev_active) {
+    if (p_active_) {
+      if (p_use_scan_) {
+        scan_sub_ = nh_->create_subscription<sensor_msgs::msg::LaserScan>(
+            "scan", 10, std::bind(&ObstacleExtractor::scanCallback, this, std::placeholders::_1));
+      } else if (p_use_pcl_) {
+        pcl_sub_ = nh_->create_subscription<sensor_msgs::msg::PointCloud>(
+            "pcl", 10, std::bind(&ObstacleExtractor::pclCallback, this, std::placeholders::_1));
+      } else if (p_use_pcl_2_) {
+        pcl2_sub_ = nh_->create_subscription<sensor_msgs::msg::PointCloud2>(
+            "pcl2", 10, std::bind(&ObstacleExtractor::pcl2Callback, this, std::placeholders::_1));
+      }
+      obstacles_pub_ = nh_->create_publisher<obstacle_detector::msg::Obstacles>("raw_obstacles", 10);
+      obstacles_vis_pub_ = nh_->create_publisher<visualization_msgs::msg::MarkerArray>("raw_obstacles_visualization", 10);
+    } else {
+      auto obstacles_msg = obstacle_detector::msg::Obstacles();
+      obstacles_msg.header.frame_id = p_frame_id_;
+      obstacles_msg.header.stamp = nh_->get_clock()->now();
+      obstacles_pub_->publish(obstacles_msg);
+      scan_sub_.reset();
+      pcl_sub_.reset();
+      pcl2_sub_.reset();
+    }
+  }
+
+  res->success = true;
 }
 
 void ObstacleExtractor::scanCallback(const sensor_msgs::msg::LaserScan& scan_msg) {
